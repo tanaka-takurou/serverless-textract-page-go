@@ -1,0 +1,40 @@
+{{define "base"}}
+<!doctype html>
+<html>
+  <head>
+{{template "headtag" .}}
+  </head>
+  <body>
+    <h1 class="ui center aligned header">Textract</h1>
+    <div class="main ui container">
+      <form class="ui segment" method="POST">
+        <div class="content">
+          <div class="ui form">
+            <div class="field">
+              <img id="preview" src>
+            </div>
+            <div class="field">
+              <label>Image File</label>
+              <div class="ui input">
+                <input id="image" type="file" name="image" accept="image/*" onchange="ChangeImage();">
+              </div>
+            </div>
+            <div class="field">
+              <div id="submit" class="ui green button" onclick="SubmitForm();">Send</div>
+            </div>
+          </div>
+        </div>
+        <input id="action" type="hidden" name="action" value="analyzedocument">
+      </form>
+    </div>
+    <div id="warning" class="ui hidden warning message"></div>
+    <div id="info" class="ui hidden info message">
+      <i class="close icon"></i>
+      <div class="header">
+        Result
+      </div>
+      <p id="result"></p>
+    </div>
+  </body>
+</html>
+{{end}}

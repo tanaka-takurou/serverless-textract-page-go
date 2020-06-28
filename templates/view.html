@@ -1,0 +1,91 @@
+{{define "main.css"}}<style type="text/css">
+body {
+  background-color: #EEE;
+}
+body > .grid {
+  height: 100%;
+}
+body > h1 {
+  margin-top: 60px !important;
+  margin-bottom: 60px !important;
+}
+.image {
+  margin-top: -100px;
+}
+.column {
+  max-width: 450px;
+}
+#preview {
+  max-width: 100%;
+}
+</style>{{end}}
+{{define "main.js"}}
+<script type="text/javascript">
+var ChangeImage = function() {
+  const file = $('#image').prop('files')[0];
+  toBase64(file).then(onConverted());
+}
+
+var toBase64 = function(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+var onConverted = function() {
+  return function(v) {
+    App.imgdata = v;
+    $('#preview').attr('src', v);
+  }
+}
+
+var SubmitForm = function() {
+  if (!App.imgdata) {
+    $("#warning").text("Image is Empty").removeClass("hidden").addClass("visible");
+    return false;
+  }
+  $("#submit").addClass('disabled');
+  var action  = $("#action").val();
+  var image = App.imgdata;
+  const data = {action, image};
+  request(data, (res)=>{
+    $("#result").text(res.message);
+    $("#info").removeClass("hidden").addClass("visible");
+    ScrollBottom();
+  }, (e)=>{
+    console.log(e.responseJSON.message);
+    $("#warning").text(e.responseJSON.message).removeClass("hidden").addClass("visible");
+    $("#submit").removeClass('disabled');
+  });
+};
+
+var request = function(data, callback, onerror) {
+  $.ajax({
+    type:          'POST',
+    dataType:      'json',
+    contentType:   'application/json',
+    scriptCharset: 'utf-8',
+    data:          JSON.stringify(data),
+    url:           {{ .Api }}
+  })
+  .done(function(res) {
+    callback(res);
+  })
+  .fail(function(e) {
+    onerror(e);
+  });
+};
+
+var ScrollBottom = function() {
+  var bottom = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  window.scroll(0, bottom);
+}
+
+var App = { token: '', imgdata: null };
+
+</script>
+{{end}}
+{{define "favicon"}}data:image/x-icon;base64,AAABAAEAICAAAAEAIAAoEQAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAAAAAABMLAAATCwAAAAAAAAAAAAD//////////////v///v3//v79//7+/f/+/v3//v39/////////////////////////////v7+//39/f/9/f3//f39//39/f/+/f7////////////////////////////9/f3//f39//39/f/9/f3//f39//7+/v////////////////////7///////////////////////////////////////////////////////7+/v///////////////////////////////////v7///////////////////////////////////////////////////////7+/v/////////+///////8+ez/9vPE//Hry//s48r/593K/+PYy//5+Pf////////+/v///////////97a2f/OyMb/0czK/9DMyv/Mx8b/29jX/////////v7////////////5+vn/zMrJ/8vJyf/Mysr/zMvL/8bFxf/p6en///////7+/v////3///////vz0//q3wD/28YA/8qrAP+7jwD/rnsA//Xy8P///////v7+//79/f//////ppiT/wAAAP9IAAD/QwAA/wAAAP+Qg4D///////7+/v/+/v7///////f39v89FAj/AAAA/wAAAP8AAAD/AAAA/8fFxf///////f39/////f//////+/jV/+vjAP/eyzX/z7Qt/8GcKP+2jEP/9vPx///////+/v7//v7+//////+vo5//UQAA/2lDN/9mQjb/RAAA/52TkP///////v7+//7+/v//////9/f3/2NTUf84CAD/RC0r/0g2Nf8AAAD/zMrK///////9/f3////9///////7/NT/6+QA/93KKv/Psh//v5oY/7SJO//18vD///////79/f/9/f3//////62hnf9LAAD/ZTst/2I5LP89AAD/m5CN///////9/f3//v39///////29vb/Xk1L/y8AAP89Hxz/QSsq/wAAAP/Lysr///////39/f////3///////z71P/r4wD/3MkF/82wAP++lwD/s4Ys//j29P//////////////////////raGd/z0AAP9eKxD/WigO/yoAAP+aj43///////////////////////r6+v9YRUL/EgAA/y0AAP8yCwf/AAAA/8rJyP///////f39/////f//////+/vW/+zlGP/fzlL/0rhN/8SjTP+6k1j/7efj//f19P/08vD/8/Hw//j39/+toZ3/Zjwq/3ZaUv9zWVL/Xjku/5yRj//29fX/8fDw//Hx8P/08/P/6unp/2xhXv9VQ0H/Wk1L/11TUv8qAAD/zczM///////9/f3////////////+/vv//f32//z89//7+vf//Pv5//bz8P+ugln/mmEx/5FfPv+IW0H/aRsA/8/Ixv/+////9vb1//b19f/+/v7/08/O/z0AAP9cQDr/VDYv/00sJf9VPjr/6unp//r6+v/29vb/9/f3//b39v/6+vr//////////////////////////////////////////////////Pr5/6x+Uv+UVAD/jFQl/4NOLP9eAAD/1M7M///////////////////////a19b/HwAA/1ApHv9GEwD/OgAA/0ssJ//08/P//////////////////////////////////////////////////////////v////7//v7+///////6+ff/rX9W/5ZZG/+OWDD/hlM1/2IAAP/TzMr///////39/f/9/Pz//////9jV1P8tAAD/VTMr/0skGv9CDgD/TzQw//Hx8f///////f39//7+/v/+/v7///////////////////////////////////////////////7///////v59/+ugVr/mFwm/5BcN/+HVzv/ZQAA/9TNy////////f39//39/f//////2dbV/zMAAP9YOjP/Ty0m/0cfFf9UOzf/8vHx///////+/v7////////////////////////////////////////////////////////+/v//////+vj3/6ZwM/+MOQD/gjgA/3cvAP9HAAD/0MnH///////9/f3//f39///////V0tH/AAAA/zAAAP8YAAD/AAAA/yUAAP/x8PD///////7+/v/////////////////////////////////////////////////////////////////9/Pv/5t3X/+PZ1f/h2dX/39jW/9nU0v/x7+////////7+/v/+/v7///////Dw8P/V0tH/2dbV/9jV1P/X1dT/2NbV//r6+v/////////////////////////////////////////////////////////////////////////////////////////////////////////////////+/v7////////////+/v7///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////7+/f/+/f3//v39//79/f/+/f3//v7+///////////////////////+/v7//f39//39/f/9/f3//f39//39/f/////////////////////////////////////////////////////////+///+/f/+/v3//v79//7+/f/+/f3//v39//39/f/9/f3//f39//39/f/+/v7///////////////////////7+/v/9/f3//f39//39/f/9/f3//f39//39/f/9/f3//f39//39/f/9/f3//v7+/////////////////////v/////////////////////////////////////////////////////////////////+/v7////////////+/v7//////////////////////////////////////////////////////////////////v7+//////////7///////397//39Mb/8evL/+zjyv/n3cv/49fL/+DTy//c0cv/2c/L/9jPzP/Rycb/7uzr///////+/v7//v7+///////w7+7/y8fG/8/My//Oysr/zcrK/83Kyv/Nysr/zMrK/8zKyv/Ny8v/x8XF/+vr6////////v7+/////f//////+/vR/+ngAP/axQD/yakA/7mPAP+qdAD/m1UA/4w9AP9+KgD/dCMA/0AAAP/PyMb///////39/f/9/f3//////9XS0f8AAAD/JwAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/xsXF///////9/f3////9///////7+9X/6+MA/93KN//Osy3/wZ0y/7OINf+mcjr/mmQ6/5BcN/+IWT//ZgYA/9TNzP///////f39//39/f//////2dbV/zgAAP9bPTf/UC4n/04uKf9LLSj/SCwo/0UqKP9CKCb/STg3/wAAAP/My8r///////39/f////3///////v71f/q4gD/3Mkq/82xHP/AmyP/sYUn/6RsKf+YXSn/jFQk/4RRMP9fAAD/08zK///////9/f3//f39///////Y1dT/JgAA/1IuJf9FFAD/QxQE/0ARAv8/GBD/PBcS/zgTDv9BKyr/AAAA/8vKyv///////f39/////f//////+/vU/+rhAP/cyAP/zK8A/76XAP+wgAP/pW0r/5heLP+MVCb/hFIy/18AAP/TzMv///////39/f/9/f3//////9nV1P8pAAD/Uy8n/0cYBv9EGAv/QRUJ/zMAAP8qAAD/JAAA/zEIBP8AAAD/ysnI///////9/f3////9///////7+tb/7OQZ/9/NUv/Qt0z/xKRQ/7ePTv+lbi7/mF0r/4xUJ/+EUjL/YAAA/9PMy////////f39//39/f//////2NXU/ygAAP9TLyf/RxgH/0QYCv9BFAf/WEVC/11NS/9ZSkj/XlNS/y0EAP/NzMz///////39/f////////////7+/P/9/ff//fz3//v69//8+/n/9vPw/6t9Uf+VVxf/jVYs/4RRMv9gAAD/08zL///////9/f3//f39///////Z1dT/KQAA/1MwJ/9JHhL/QAUA/0wuKf/q6en/+/v6//b29v/39/f/9/f3//v7+//////////////////////////////////////////////////8+/n/rH5V/5VXE/+NVyz/hFEy/18AAP/TzMv///////39/f/9/f3//////9jV1P8nAAD/UzAn/0kfE/8/AAD/TjIu//Tz8//////////////////////////////////////////////////////////+/////v/+/v7///////r49v+sflT/lVcU/41WLP+EUTL/XwAA/9PMy////////f39//39/f//////2NXU/ycAAP9TMCf/SR8T/z8BAP9NMSz/8fDw///////9/f3//v7+//7+/v///////////////////////////////////////////////v//////+/n3/66BWv+XXCj/kFw4/4dYPP9kAAD/083L///////9/f3//f39///////Z1tX/NQAA/1k7NP9QLyj/RyAY/1Q8Of/y8vH///////7+/v////////////////////////////////////////////////////////7+///////6+Pb/pW4w/4s3AP+BNgD/diwA/0UAAP/Qycf///////39/f/9/f3//////9XR0P8AAAD/MAAA/xcAAP8AAAD/IQAA//Dw8P///////v7+//////////////////////////////////////////////////////////////////38+//m3df/4tnV/+HZ1f/f2Nb/2dTR//Hv7////////v7+//7+/v//////8PDv/9XS0f/Y1tX/19XV/9fV1P/X1dT/+fn5//////////7///////////////////////////////////////////////////////////////////////////////////////////////////////7+/v////////////7+/v///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////v39//79/f/+/f3//v39//39/f/+/v7///////////////////////7+/v/9/f3//f39//39/f/9/f3//f39////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=={{end}}
