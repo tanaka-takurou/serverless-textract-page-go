@@ -74,6 +74,7 @@ func analyzeDocument(img string)(string, error) {
 	}
 	res, err2 := svc.AnalyzeDocument(input)
 	if err2 != nil {
+		log.Print(err2)
 		return "", err2
 	}
 	if len(res.Blocks) < 1 {
@@ -87,6 +88,7 @@ func analyzeDocument(img string)(string, error) {
 	}
 	results, err3 := json.Marshal(wordList)
 	if err3 != nil {
+		log.Print(err3)
 		return "", err3
 	}
 	return string(results), nil

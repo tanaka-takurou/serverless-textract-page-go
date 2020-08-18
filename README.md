@@ -9,7 +9,7 @@ Simple kit for serverless textract using AWS Lambda.
 
 ## Requirements
 - AWS (Lambda, API Gateway, Textract)
-- aws-cli
+- aws-sam-cli
 - golang environment
 
 
@@ -30,17 +30,7 @@ Simple kit for serverless textract using AWS Lambda.
 - Edit templates/header.html like as 'favicon.ico'.
 
 ### Deploy
-Open scripts/deploy.sh and edit 'your_function_name'.
-
-Open api/scripts/deploy.sh and edit 'your_api_function_name'.
-
-Open constant/constant.json and edit 'your_api_url'.
-
-
-Then run this command.
-
-```
-$ sh scripts/deploy.sh
-$ cd api
-$ sh scripts/deploy.sh
+```bash
+make clean build
+AWS_PROFILE={profile} AWS_DEFAULT_REGION={region} make bucket={bucket} stack={stack name} deploy
 ```
