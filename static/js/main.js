@@ -46,7 +46,7 @@ var request = function(data, callback, onerror) {
     contentType:   'application/json',
     scriptCharset: 'utf-8',
     data:          JSON.stringify(data),
-    url:           {{ .Api }}
+    url:           App.url
   })
   .done(function(res) {
     callback(res);
@@ -61,4 +61,4 @@ var ScrollBottom = function() {
   window.scroll(0, bottom);
 }
 
-var App = { token: '', imgdata: null };
+var App = { imgdata: null, url: location.origin + {{ .ApiPath }} };
