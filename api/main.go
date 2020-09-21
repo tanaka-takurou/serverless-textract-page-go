@@ -7,11 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/base64"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/textract"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/service/textract"
 )
 
 type APIResponse struct {
@@ -20,7 +21,8 @@ type APIResponse struct {
 
 type Response events.APIGatewayProxyResponse
 
-const layout string = "2006-01-02 15:04"
+var cfg aws.Config
+var textractClient *textract.Client
 
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
 	var jsonBytes []byte
@@ -31,7 +33,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		switch v {
 		case "analyzedocument" :
 			if i, ok := d["image"]; ok {
-				r, e := analyzeDocument(i)
+				r, e := analyzeDocument(ctx, i)
 				if e != nil {
 					err = e
 				} else {
@@ -55,43 +57,51 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	}, nil
 }
 
-func analyzeDocument(img string)(string, error) {
+func analyzeDocument(ctx context.Context, img string)(string, error) {
 	b64data := img[strings.IndexByte(img, ',')+1:]
 	data, err := base64.StdEncoding.DecodeString(b64data)
 	if err != nil {
 		log.Print(err)
 		return "", err
 	}
-	svc := textract.New(session.New(), &aws.Config{
-		Region: aws.String("us-west-2"),
-	})
+	if textractClient == nil {
+		cfg.Region = "us-west-2"
+		textractClient = textract.New(cfg)
+	}
 
 	input := &textract.AnalyzeDocumentInput{
 		Document: &textract.Document{
 			Bytes: data,
 		},
-		FeatureTypes: []*string{aws.String("TABLES")},
+		FeatureTypes: []textract.FeatureType{textract.FeatureTypeTables},
 	}
-	res, err2 := svc.AnalyzeDocument(input)
+	req := textractClient.AnalyzeDocumentRequest(input)
+	res, err2 := req.Send(ctx)
 	if err2 != nil {
-		log.Print(err2)
 		return "", err2
 	}
-	if len(res.Blocks) < 1 {
+	if len(res.AnalyzeDocumentOutput.Blocks) < 1 {
 		return "No Document", nil
 	}
 	var wordList []string
-	for _, v := range res.Blocks {
-		if aws.StringValue(v.BlockType) == "WORD" || aws.StringValue(v.BlockType) == "LINE" {
+	for _, v := range res.AnalyzeDocumentOutput.Blocks {
+		if v.BlockType == textract.BlockTypeWord || v.BlockType == textract.BlockTypeLine {
 			wordList = append(wordList, aws.StringValue(v.Text))
 		}
 	}
 	results, err3 := json.Marshal(wordList)
 	if err3 != nil {
-		log.Print(err3)
 		return "", err3
 	}
 	return string(results), nil
+}
+
+func init() {
+	var err error
+	cfg, err = external.LoadDefaultAWSConfig()
+	if err != nil {
+		log.Print(err)
+	}
 }
 
 func main() {
