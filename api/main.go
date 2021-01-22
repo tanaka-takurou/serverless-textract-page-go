@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"bytes"
-	"reflect"
 	"strings"
 	"context"
 	"encoding/json"
@@ -24,7 +22,6 @@ type APIResponse struct {
 
 type Response events.APIGatewayProxyResponse
 
-var cfg aws.Config
 var textractClient *textract.Client
 
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
@@ -68,7 +65,7 @@ func analyzeDocument(ctx context.Context, img string)(string, error) {
 		return "", err
 	}
 	if textractClient == nil {
-		textractClient = getTextractClient()
+		textractClient = getTextractClient(ctx)
 	}
 
 	input := &textract.AnalyzeDocumentInput{
@@ -87,7 +84,7 @@ func analyzeDocument(ctx context.Context, img string)(string, error) {
 	var wordList []string
 	for _, v := range res.Blocks {
 		if v.BlockType == types.BlockTypeWord || v.BlockType == types.BlockTypeLine {
-			wordList = append(wordList, stringValue(v.Text))
+			wordList = append(wordList, aws.ToString(v.Text))
 		}
 	}
 	results, err3 := json.Marshal(wordList)
@@ -97,89 +94,18 @@ func analyzeDocument(ctx context.Context, img string)(string, error) {
 	return string(results), nil
 }
 
-func getTextractClient() *textract.Client {
-	if cfg.Region != "us-west-2" {
-		cfg = getConfig()
-	}
-	return textract.NewFromConfig(cfg)
+func getTextractClient(ctx context.Context) *textract.Client {
+	return textract.NewFromConfig(getConfig(ctx))
 }
 
-func getConfig() aws.Config {
+func getConfig(ctx context.Context) aws.Config {
 	var err error
-	newConfig, err := config.LoadDefaultConfig()
+	newConfig, err := config.LoadDefaultConfig(ctx)
 	newConfig.Region = "us-west-2"
 	if err != nil {
 		log.Print(err)
 	}
 	return newConfig
-}
-
-func stringValue(i interface{}) string {
-	var buf bytes.Buffer
-	strVal(reflect.ValueOf(i), 0, &buf)
-	res := buf.String()
-	return res[1:len(res) - 1]
-}
-
-func strVal(v reflect.Value, indent int, buf *bytes.Buffer) {
-	for v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	switch v.Kind() {
-	case reflect.Struct:
-		buf.WriteString("{\n")
-		for i := 0; i < v.Type().NumField(); i++ {
-			ft := v.Type().Field(i)
-			fv := v.Field(i)
-			if ft.Name[0:1] == strings.ToLower(ft.Name[0:1]) {
-				continue // ignore unexported fields
-			}
-			if (fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Slice) && fv.IsNil() {
-				continue // ignore unset fields
-			}
-			buf.WriteString(strings.Repeat(" ", indent+2))
-			buf.WriteString(ft.Name + ": ")
-			if tag := ft.Tag.Get("sensitive"); tag == "true" {
-				buf.WriteString("<sensitive>")
-			} else {
-				strVal(fv, indent+2, buf)
-			}
-			buf.WriteString(",\n")
-		}
-		buf.WriteString("\n" + strings.Repeat(" ", indent) + "}")
-	case reflect.Slice:
-		nl, id, id2 := "", "", ""
-		if v.Len() > 3 {
-			nl, id, id2 = "\n", strings.Repeat(" ", indent), strings.Repeat(" ", indent+2)
-		}
-		buf.WriteString("[" + nl)
-		for i := 0; i < v.Len(); i++ {
-			buf.WriteString(id2)
-			strVal(v.Index(i), indent+2, buf)
-			if i < v.Len()-1 {
-				buf.WriteString("," + nl)
-			}
-		}
-		buf.WriteString(nl + id + "]")
-	case reflect.Map:
-		buf.WriteString("{\n")
-		for i, k := range v.MapKeys() {
-			buf.WriteString(strings.Repeat(" ", indent+2))
-			buf.WriteString(k.String() + ": ")
-			strVal(v.MapIndex(k), indent+2, buf)
-			if i < v.Len()-1 {
-				buf.WriteString(",\n")
-			}
-		}
-		buf.WriteString("\n" + strings.Repeat(" ", indent) + "}")
-	default:
-		format := "%v"
-		switch v.Interface().(type) {
-		case string:
-			format = "%q"
-		}
-		fmt.Fprintf(buf, format, v.Interface())
-	}
 }
 
 func main() {
